@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="choose_detection">
+        <item>安装软件状态监测</item>
+        <item>电话功能监测</item>
+        <item>短信功能监测</item>
+        <item>APN/VPDN状态监测</item>
+        <item>互联网痕迹监测</item>
+        <item>外设检测</item>
+        <item>是否ROOT</item>
+        <item>USB连接设备</item>
+    </string-array>
+</resources>
