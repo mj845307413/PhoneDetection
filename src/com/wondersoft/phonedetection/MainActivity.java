@@ -1,9 +1,14 @@
-package com.majun.phonedetection;
+package com.wondersoft.phonedetection;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.LineNumberReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+
+import com.majun.phonedetection.R;
 
 import android.app.Activity;
 import android.app.ActivityManager;
@@ -22,6 +27,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.TrafficStats;
 import android.net.Uri;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
 import android.os.Bundle;
@@ -44,6 +50,7 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 	public final int PERIPHERAL_STATUS = 5;
 	public final int ISROOT=6;
 	public final int USB_DEVICE=7;
+	public final int HARDWAREID=8;
 	private PackageManager manager;
 	private TextView textView;
 	private StringBuilder buffer;
@@ -55,11 +62,13 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 	private final static int kSystemRootStateDisable=0;
 	private final static int kSystemRootStateEnable=1;
 	private static int systemRootState=kSystemRootStateUnknow; 
+	private TelephonyManager telephonyManager;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		manager = getPackageManager();
+		telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 		textView = (TextView) findViewById(R.id.textview);
 		spinner = (Spinner) findViewById(R.id.spinner);
 		packageSpinner = (Spinner) findViewById(R.id.package_spinner);
@@ -117,15 +126,18 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 					textView.setText("短信功能进程开启");
 				}
 				break;
+				//APN状态监测
 			case APN_VPDN_STATUS:
 				buffer.delete(0, buffer.length());
 				getAPNVPDNState();
 				break;
+				//浏览器访问监测
 			case NETWORK_RECORD:
 				buffer.delete(0, buffer.length());
 				ContentResolver contentResolver = getContentResolver();
 				getRecords(contentResolver);
 				break;
+				//外设状态监测
 			case PERIPHERAL_STATUS:
 				buffer.delete(0, buffer.length());
 				boolean isWIFIEnable = WiFiEnable(this);
@@ -140,12 +152,14 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 				buffer.append("红外功能是否开启：" + false + "\r\n");
 				textView.setText(buffer);
 				break;
+				//是否Root
 			case ISROOT:
 				buffer.delete(0, buffer.length());
 				boolean isRoot=isSu();
 				buffer.append("是否Root：" +isRoot + "\r\n");
 				textView.setText(buffer);
 				break;
+				//USB连接监测
 			case USB_DEVICE:
 				buffer.delete(0, buffer.length());
 				String acString = ""; 
@@ -162,6 +176,12 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 				} 
 				buffer.append(acString+ "\r\n");
 				textView.setText(buffer);
+				break;
+			case HARDWAREID:
+				buffer.delete(0, buffer.length());
+				buffer.append(getHardwareid()+ "\r\n");
+				textView.setText(buffer);
+				break;
 			default:
 				break;
 			}
@@ -194,7 +214,6 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 		buffer.append("cdma支持：" + cdmaSupport + "\r\n");
 
 		// 获取电话类型
-		TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 		int phoneType = telephonyManager.getPhoneType();
 		switch (phoneType) {
 		case TelephonyManager.PHONE_TYPE_GSM:
@@ -364,7 +383,6 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 					"yyyy-MM-dd hh:mm;ss");
 			Date d = new Date(Long.parseLong(date));
 			time = dateFormat.format(d);
-
 			if (Long.parseLong(date) > selectTime) {
 				buffer.append(title + url + time + "\r\n");
 			}
@@ -500,4 +518,42 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 			}
 		}      
 	};
+	
+	
+	public String getHardwareid() {
+		String IMEI = telephonyManager.getDeviceId();
+		String IMSI = telephonyManager.getSubscriberId();
+		String MAC=getMac();
+		return IMEI+IMSI+MAC;
+	}
+	/**
+	 * 获取终端MAC
+	 * @return
+	 */
+	public String getMac() 
+	{
+	    String macSerial = null;
+	    String str = "";
+
+	    try 
+	    {
+	        Process pp = Runtime.getRuntime().exec("cat /sys/class/net/wlan0/address ");
+	        InputStreamReader ir = new InputStreamReader(pp.getInputStream());
+	        LineNumberReader input = new LineNumberReader(ir);
+
+	        for (; null != str;) 
+	        {
+	            str = input.readLine();
+	            if (str != null)
+	            {
+	                macSerial = str.trim();// 去空格
+	                break;
+	            }
+	        }
+	    } catch (IOException ex) {
+	        // 赋予默认值
+	        ex.printStackTrace();
+	    }
+	    return macSerial;
+	}
 }
